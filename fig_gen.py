@@ -4,12 +4,42 @@ import pickle
 import pandas as pd
 from typing import List, Optional
 from pathlib import Path
+from itertools import combinations
+from random import sample
+import sys
+import re
 
+def expand_numeric_flag_values(flag: str) -> List[str]:
+    """Expands flags with multiple numerical values into individual flags.
+    Args:
+        flag (str): The flag to expand.
+    Returns:
+        List[str]: A list of expanded flags with each numerical value.
+    Examples:
+        >>> expand_numeric_flag_values('--stop-by-stmt=[5, 15, 25, 35, 45, 55]')
+        ['--stop-by-stmt=5', '--stop-by-stmt=15', '--stop-by-stmt=25', '--stop-by-stmt=35', '--stop-by-stmt=45', '--stop-by-stmt=55']
+    """
+    matches = re.findall(r"\[(.*?)\]", flag)
+    if matches:
+        numeric_values = [int(x) for x in matches[0].split(',')]
+        expanded_flags = [flag.replace(matches[0], str(val)) for val in numeric_values]
+        return expanded_flags
+    return [flag]
 
 def run_experiments_on_flags(num_files: int,
                              flags: List[str],
                              results_df: Optional[pd.DataFrame] = None) -> pd.DataFrame:
+    """Runs experiments on a given set of flags and updates the results DataFrame.
 
+    Args:
+        num_files (int): The number of files to generate and analyze.
+        flags (List[str]): A list of flags to use for generating the files.
+        results_df (Optional[pd.DataFrame], optional): An optional DataFrame to append the results to.
+            If not provided, a new DataFrame will be created. Defaults to None.
+
+    Returns:
+        results_df (pd.DataFrame): The updated results DataFrame.
+    """
     # Add csmith to the PATH
     csmith_path = os.path.join(os.environ['HOME'], 'csmith', 'bin')
     os.environ['PATH'] += os.pathsep + csmith_path
@@ -29,10 +59,7 @@ def run_experiments_on_flags(num_files: int,
             i += 1
             random_file = f'random{i}.c'
 
-        # Find a unique filename for the binary file
-        while Path(binary_file).exists():
-            i += 1
-            binary_file = f'random{i}'
+        binary_file = f'random{i}'
 
         # Generate random C code using csmith with the specified flags and values
         csmith_command = ['csmith']
@@ -68,7 +95,7 @@ def run_experiments_on_flags(num_files: int,
 if __name__ == "__main__":
     num_files: int = 100
     csmith_flags: List[str] = [
-        '--stop-by-stmt=35',
+        '--stop-by-stmt=[5, 15, 25, 35, 45, 55]',
         '--max-struct-nested-level',
         '--no-signed-char-index',
         '--max-nested-struct-level=3',
@@ -85,8 +112,27 @@ if __name__ == "__main__":
         # Create a new DataFrame if the file doesn't exist
         results_df: pd.DataFrame = pd.DataFrame()
 
-    # Run experiments on flags and update the results DataFrame
-    results_df = run_experiments_on_flags(num_files, csmith_flags, results_df)
+    # Generate flag combinations
+    all_flag_combinations = []
+    for flag in csmith_flags:
+        expanded_flags = expand_numeric_flag_values(flag)
+        all_flag_combinations.append(expanded_flags)
+
+    all_flag_combinations = list(combinations(*all_flag_combinations))
+
+    # Specify the number of flag combinations to sample
+    if len(sys.argv) > 1:
+        num_flag_combinations_to_sample = int(sys.argv[1])
+    else:
+        num_flag_combinations_to_sample = 5  # Default value
+
+    # Randomly sample flag combinations
+    sampled_flag_combinations = sample(all_flag_combinations, num_flag_combinations_to_sample)
+
+    # Run experiments on each sampled flag combination and update the results DataFrame
+    for flag_combination in sampled_flag_combinations:
+        flag_combination = list(flag_combination)
+        results_df = run_experiments_on_flags(num_files, flag_combination, results_df)
 
     # Save the updated DataFrame to experiment_results.pkl
     with open('experiment_results.pkl', 'wb') as file:
