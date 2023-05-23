@@ -1,38 +1,15 @@
-# 26.4.23
-# Automated Software Testing ETH Zurich
-
-# Computes [binary file] / [source file] ratios for random C++/C programs
-# and produces a simple bar chart showing the distribution of these ratios 
-
-# Assumes that 'simple_driver.sh' has already been run in the directory
-# in which this file is called. 'simple_driver.sh' makes CSmith produce
-# a bunch of random C/C++ programs. Then these are compiled to binaries.
-# The programs produced by CSmith are named simply 'random{i}.c' and their
-# binaries which they compiled to are named 'random{i}' where for example 'random3.c'
-# is compiled to 'random3'.
-
-import matplotlib.pyplot as plt
-import subprocess
 import os
-from dataclasses import dataclass
-from numpy import histogram
-import pandas as pd
+import subprocess
 import pickle
-
-"""
-If you want to mess with the actual probilities for the actual generation
-of the random files instead of just messing with the flags, do
-
-csmith/bin/csmith --dump-default-probabilities x.txt
-
-and mess around with the results
-"""
-
-import os
-import subprocess
 import pandas as pd
+from typing import List, Optional
+from pathlib import Path
 
-def run_experiments_on_flags(num_files, flags, results_df=None):
+
+def run_experiments_on_flags(num_files: int,
+                             flags: List[str],
+                             results_df: Optional[pd.DataFrame] = None) -> pd.DataFrame:
+
     # Add csmith to the PATH
     csmith_path = os.path.join(os.environ['HOME'], 'csmith', 'bin')
     os.environ['PATH'] += os.pathsep + csmith_path
@@ -48,12 +25,12 @@ def run_experiments_on_flags(num_files, flags, results_df=None):
         binary_file = f'random{i}'
 
         # Find a unique filename for the random C file
-        while os.path.isfile(random_file):
+        while Path(random_file).exists():
             i += 1
             random_file = f'random{i}.c'
 
         # Find a unique filename for the binary file
-        while os.path.isfile(binary_file):
+        while Path(binary_file).exists():
             i += 1
             binary_file = f'random{i}'
 
@@ -87,21 +64,10 @@ def run_experiments_on_flags(num_files, flags, results_df=None):
 
     return results_df
 
-# Example usage
-num_files = 100
-csmith_flags = [
-    '--stop-by-stmt=35',
-    '--max-struct-nested-level',
-    '--no-signed-char-index',
-    '--max-nested-struct-level=3',
-    '--fixed-struct-fields',
-    '--no-ptrs=1'
-]
-
 
 if __name__ == "__main__":
-    num_files = 100
-    csmith_flags = [
+    num_files: int = 100
+    csmith_flags: List[str] = [
         '--stop-by-stmt=35',
         '--max-struct-nested-level',
         '--no-signed-char-index',
@@ -111,13 +77,13 @@ if __name__ == "__main__":
     ]
 
     # Check if the experiment_results.pkl file exists
-    if os.path.isfile('experiment_results.pkl'):
+    if Path('experiment_results.pkl').exists():
         # Load the DataFrame from the pickle file
         with open('experiment_results.pkl', 'rb') as file:
-            results_df = pickle.load(file)
+            results_df: pd.DataFrame = pickle.load(file)
     else:
         # Create a new DataFrame if the file doesn't exist
-        results_df = pd.DataFrame()
+        results_df: pd.DataFrame = pd.DataFrame()
 
     # Run experiments on flags and update the results DataFrame
     results_df = run_experiments_on_flags(num_files, csmith_flags, results_df)
