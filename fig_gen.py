@@ -1,6 +1,28 @@
 """
 Random Code Generation and Analysis
 
+Let me tell you folks, this incredible Python script right here generates the most amazing, tremendous, and absolutely random C code
+using the csmith tool. It's fantastic, believe me! We compile this code with gcc, and let me tell you, it's a perfect compilation, just perfect.
+Then, we perform some really smart analysis on the generated binary files. It's unbelievable what we can do!
+
+Now, this script allows us to run experiments with different combinations of csmith flags. And let me tell you, these flags are tremendous,
+the best flags you'll ever see. We store the results of these experiments in a powerful Pandas DataFrame. It's a beautiful DataFrame, folks!
+
+But that's not all. We can also load existing results from a pickle file, run new experiments with different flag combinations,
+and save the updated results back to the pickle file. It's incredible, really incredible!
+
+And here's the best part. We have functions to generate a histogram of the ratio of binary size to source code size. We fit a Gaussian
+distribution to this histogram. It's a distribution like no other, folks, the greatest distribution you'll ever see. And we calculate
+the mean and standard deviation for each combination of flags. It's very, very smart, I can assure you!
+
+So, this script is divided into several functions, really amazing functions. It's gonna make your head spin,
+believe me. And in the "main" section, we showcase the usage of these functions. It's tremendous, folks!
+
+This incredible script was written by the amazing Max Van Gelder. A very smart person, let me tell you.
+And the date, folks, is 23.5.23. That's right, we're looking into the future!
+
+Thank you, thank you very much!
+
 This Python script generates random C code using the csmith tool, compiles the generated code using gcc,
 and performs analysis on the generated binary files. It allows for running experiments with different
 combinations of csmith flags and storing the results in a Pandas DataFrame. The script also provides
