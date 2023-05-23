@@ -1,3 +1,32 @@
+"""
+Random Code Generation and Analysis
+
+This Python script generates random C code using the csmith tool, compiles the generated code using gcc,
+and performs analysis on the generated binary files. It allows for running experiments with different
+combinations of csmith flags and storing the results in a Pandas DataFrame. The script also provides
+functionality to load the existing results DataFrame from a pickle file, run experiments with new flag
+combinations, and save the updated results back to the pickle file. Additionally, it includes a function
+to generate a histogram of the ratio of binary size to source code size and fit a Gaussian distribution
+to the histogram.
+
+The script is divided into several functions:
+
+- expand_numeric_flag_values(flag): Expands flags with multiple numerical values into individual flags.
+- run_experiments_on_flags(num_files, flags, results_df): Runs experiments on a given set of flags
+  and updates the results DataFrame.
+- generate_histogram(results_df, flags): Generates a histogram of the ratio of binary size to source
+  code size, fits a Gaussian distribution, and prints statistics.
+
+The "__main__" section of the script demonstrates the usage of these functions. It allows for command-line
+arguments to specify the number of flag combinations to sample for experiments. The results DataFrame is
+loaded from an existing pickle file if available, and new experiments are run on sampled flag combinations.
+The updated results are then saved back to the pickle file.
+
+Author: Max Van Gelder
+Date: 23.5.23
+"""
+
+
 import os
 import subprocess
 import pickle
@@ -7,7 +36,80 @@ from pathlib import Path
 from itertools import combinations
 from random import sample
 import sys
-import re
+import matplotlib.pyplot as plt
+import pandas as pd
+import numpy as np
+from scipy.stats import norm
+
+def generate_histogram(results_df: pd.DataFrame, flags: List[str]) -> None:
+    """Generates a histogram of the ratio of binary size to source code size,
+    fits a Gaussian distribution, and prints statistics.
+
+    Args:
+        results_df (pd.DataFrame): The DataFrame containing the experiment results.
+        flags (List[str]): The list of flags used for the experiments.
+
+    Returns:
+        None
+
+    Raises:
+        ValueError: If no entries matching the given flags are found in the dataframe.
+    """
+    # Filter the dataframe to get entries matching the given flags
+    filtered_df = results_df.copy()
+    for flag in flags:
+        if flag not in filtered_df.columns:
+            raise ValueError(f"No entries matching the flag '{flag}' found in the dataframe.")
+        filtered_df = filtered_df[filtered_df[flag].notnull()]
+
+    # Check if any entries matching the given flags are found
+    if filtered_df.empty:
+        raise ValueError("No entries matching the given flags found in the dataframe.")
+
+    # Calculate the ratio of binary size to source code size
+    filtered_df['Size Ratio'] = filtered_df['Binary Size'] / filtered_df['Original Size']
+
+    # Plot the histogram
+    plt.hist(filtered_df['Size Ratio'], bins=10, density=True, alpha=0.5, label='Histogram')
+
+    # Fit a Gaussian distribution to the histogram
+    mu, sigma = norm.fit(filtered_df['Size Ratio'])
+    x = np.linspace(filtered_df['Size Ratio'].min(), filtered_df['Size Ratio'].max(), 100)
+    y = norm.pdf(x, mu, sigma)
+    plt.plot(x, y, 'r-', label='Gaussian Fit')
+
+    # Set plot labels and title
+    plt.xlabel('Binary Size / Source Code Size')
+    plt.ylabel('Density')
+    plt.title('Histogram of Binary Size to Source Code Size Ratio')
+    plt.legend()
+
+    # Calculate statistics
+    mean = np.mean(filtered_df['Size Ratio'])
+    std_dev = np.std(filtered_df['Size Ratio'])
+
+    # Identify outliers using a threshold of 3 standard deviations
+    threshold = 3 * std_dev
+    outliers = filtered_df[filtered_df['Size Ratio'] > mean + threshold]
+
+    # Add a dashed vertical line at the cutoff threshold for outliers
+    plt.axvline(x=mean + threshold, color='k', linestyle='--', label='Outlier Threshold')
+
+    # Print statistics and outliers
+    print(f"Mean: {mean:.2f}")
+    print(f"Standard Deviation: {std_dev:.2f}")
+    print("Outliers:")
+    print(outliers)
+
+    # Set plot legend
+    plt.legend()
+
+    # Save the histogram plot
+    filename = '_'.join(flags) + '_histogram.png'
+    plt.savefig(filename)
+
+    # Show the plot
+    plt.show()
 
 def expand_numeric_flag_values(flag: str) -> List[str]:
     """Expands flags with multiple numerical values into individual flags.
